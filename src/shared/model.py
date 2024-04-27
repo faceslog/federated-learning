@@ -1,4 +1,6 @@
 import torch
+from tqdm import tqdm
+import os
 from torchvision.models import resnet18, ResNet18_Weights
 import torch.nn as nn
 import torch.optim as optim
@@ -61,14 +63,18 @@ class ModelManager:
 
     def create_dataloader(self, data_dir, batch_size):
         """Load data from disk and apply transformations."""
+
         transform = transforms.Compose([
             transforms.Resize((256, 256)),  # Resize images to 256x256
             transforms.ToTensor(),  # Convert images to tensor
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # Normalize images
         ])
         
+        # Hello windows ?
+        num_workers= 0 if os.name == 'nt' else os.cpu_count()
+
         dataset = datasets.ImageFolder(root=data_dir, transform=transform)
-        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=4)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 
         return dataloader
     
@@ -125,8 +131,9 @@ class ModelManager:
         criterion = nn.BCELoss()
         optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
         
-        for epoch in range(num_epochs):
+        for epoch in tqdm(range(num_epochs), desc=f"Training"):
+            print(f"Epoch: {epoch+1}/{num_epochs}")
             train_loss, train_acc = self.train_epoch(self.train_dl, optimizer, criterion)
             val_loss, val_acc = self.validate_epoch(self.val_dl, criterion)
-            print(f'Epoch {epoch+1}/{num_epochs}, Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}, Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}')
-
+            print(f'Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}, Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}')
+            print(f"====================================")
