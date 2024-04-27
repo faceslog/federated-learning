@@ -1,0 +1,9 @@
+torch
+torchvision
+python-socketio
+python-socketio[client]
+requests
+numpy
+Pillow
+tqdm
+eventlet
