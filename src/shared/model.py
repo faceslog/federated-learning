@@ -120,20 +120,41 @@ class ModelManager:
             return total_loss / len(dataloader), total_accuracy / len(dataloader)
     # ===========================================================
 
-    def train(self, train_dir, val_dir, num_epochs, learning_rate, batch_size):
+    def train(self, num_epochs, learning_rate, batch_size, train_dir, val_dir=None):
 
         if not self.train_dl:
             self.train_dl = self.create_dataloader(train_dir, batch_size)
 
-        if not self.val_dl:
-            self.val_dl = self.create_dataloader(val_dir, batch_size)
+        runValidation = False
 
+        # Client is not obliged to have a validation set during training
+        # as validation will also be ran by the server once all clients have trained
+        if not self.val_dl and val_dir is not None:
+            runValidation = True
+            self.val_dl = self.create_dataloader(val_dir, batch_size)
+        
         criterion = nn.BCELoss()
         optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
         
         for epoch in tqdm(range(num_epochs), desc=f"Training"):
             print(f"Epoch: {epoch+1}/{num_epochs}")
             train_loss, train_acc = self.train_epoch(self.train_dl, optimizer, criterion)
-            val_loss, val_acc = self.validate_epoch(self.val_dl, criterion)
-            print(f'Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}, Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}')
+
+            if runValidation:
+                val_loss, val_acc = self.validate_epoch(self.val_dl, criterion)
+                print(f'Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}, Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}')
+            else:
+                print(f'Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}')
+            
             print(f"====================================")
+    
+    # ===========================================================
+
+    def validate(self, val_dir, batch_size):
+
+        if not self.val_dl:
+            self.val_dl = self.create_dataloader(val_dir, batch_size)
+
+        criterion = nn.BCELoss()
+        val_loss, val_acc = self.validate_epoch(self.val_dl, criterion)
+        print(f"Validation - Loss: {val_loss:.4f}, Acc: {val_acc:.4f}")
